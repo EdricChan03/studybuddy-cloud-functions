@@ -114,7 +114,13 @@
     "prefer-const": {"severity": "warning"},
 
     // Multi-line object liiterals and function calls should have a trailing comma. This helps avoid merge conflicts.
-    "trailing-comma": {"severity": "warning"}
+    "trailing-comma": {"severity": "warning"},
+
+    // Prefer the indentation of 2 spaces to 4 spaces or tabs.
+    "indent": {
+      "options": ["spaces", 2],
+      "severity": "warning"
+    }
   },
 
   "defaultSeverity": "error"
