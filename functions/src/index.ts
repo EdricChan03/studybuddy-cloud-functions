@@ -1,16 +1,17 @@
 import * as functions from 'firebase-functions';
 
-// // Start writing Firebase Functions
-// // https://firebase.google.com/docs/functions/typescript
-//
-// export const helloWorld = functions.https.onRequest((request, response) => {
-//  response.send("Hello from Firebase!");
-// });
-
-export const addDynamicIdToTodo = functions.firestore.document('users/{userUid}/todos/{todoUid}')
-    .onCreate((documentSnapshot, context) => {
-        return documentSnapshot
-            .ref.update({
-                id: documentSnapshot.id
-            });
-    })
+/**
+ * Automatically adds a document's ID to the document's data.
+ * This function is triggered when a document is created.
+ * Note that this only affects new documents.
+ */
+export const addDynamicIdToDocument = functions.firestore.document('users/{userUid}/{collection}/{todoUid}')
+  .onCreate((documentSnapshot, context) => {
+    if (context.params['collection'] === 'todos' || context.params['collection'] === 'todoProjects') {
+      return documentSnapshot
+        .ref.update({
+          id: documentSnapshot.id
+        });
+    }
+    return null;
+  })
