@@ -16,7 +16,10 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
       notificationBody?: string;
       notificationChannelId?: string;
       notificationColor?: string;
+      notificationIcon?: string;
+      notificationPriority?: 'normal' | 'high';
       notificationTitle?: string;
+      ttl?: number;
       userOrTopic?: string;
     }
     const data: NotificationRequest = <NotificationRequest>documentSnapshot.data();
@@ -54,6 +57,8 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
     const messageNotificationObj = {};
     // Handles the `android` key
     const messageAndroidObj = {
+      // Create `data` key to prevent errors
+      data: {},
       // Create `notification` key to prevent errors
       notification: {}
     };
@@ -63,9 +68,23 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
     if ('notificationBody' in data) {
       messageNotificationObj['body'] = data['notificationBody'];
     }
+
+    if ('notificationChannelId' in data) {
+      messageAndroidObj['data']['notificationChannelId'] = data['notificationChannelId'];
+    }
     if ('notificationColor' in data) {
       messageAndroidObj['notification']['color'] = data['notificationColor'];
     }
+    if ('notificationIcon' in data) {
+      messageAndroidObj['notification']['icon'] = data['notificationIcon'];
+    }
+    if ('notificationPriority' in data) {
+      messageAndroidObj['priority'] = data['notificationPriority'];
+    }
+    if ('ttl' in data) {
+      messageAndroidObj['ttl'] = data['ttl'];
+    }
+    
     if (Object.keys(messageNotificationObj).length !== 0) {
       message['notification'] = messageNotificationObj;
     }
