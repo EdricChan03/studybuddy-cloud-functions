@@ -190,7 +190,7 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
     const messageAndroidObj = {
       // Create `data` key to prevent errors
       data: {
-        notificationActions: []
+        notificationActions: ''
       },
       // Create `notification` key to prevent errors
       notification: {}
@@ -199,7 +199,7 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
       if (data['notificationActions'] !== null) {
         if (isType('notificationActions', 'object')) {
           if (Object.keys(data['notificationActions']).length > 0) {
-            messageAndroidObj['data']['notificationActions'] = data['notificationActions'];
+            messageAndroidObj['data']['notificationActions'] = JSON.stringify(data['notificationActions']);
           } else {
             console.error('The notification request\'s actions are empty!');
           }
