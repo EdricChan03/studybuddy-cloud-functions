@@ -14,13 +14,60 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
   .onCreate((documentSnapshot, context) => {
 
     interface NotificationRequest {
+      /**
+       * Specifies the body of the notification
+       */
       notificationBody?: string;
+      /**
+       * Specifies the Android notification channel ID of the notification
+       *
+       * Note: This property is only for Android.
+       *
+       * Note: Notification channels were introduced in Android Oreo 
+       */
       notificationChannelId?: string;
+      /**
+       * Specifies the color of the notification
+       *
+       * Note: This property is only for Android.
+       */
       notificationColor?: string;
+      /**
+       * Specifies the icon of the notification
+       *
+       * Note: This property is only for Android.
+       */
       notificationIcon?: string;
+      /**
+       * Specifies the priority of the notification
+       */
       notificationPriority?: 'normal' | 'high';
+      /**
+       * Specifies the title of the notification
+       */
       notificationTitle?: string;
+      /**
+       * Specifies the time-to-live of the notification
+       *
+       * Note: This property is only for Android.
+       *
+       * Note: This property is measured in milliseconds.
+       */
+      notificationTtl?: number;
+      /**
+       * Specifies the time-to-live of the notification
+       *
+       * Note: This property is only for Android.
+       *
+       * Note: This property is measured in milliseconds.
+       * @deprecated Use `notificationTtl` instead; will be removed in a future release
+       */
       ttl?: number;
+      /**
+       * Specifies the user/topic to send the notification to
+       *
+       * Note: If the notification is intended to be sent to a topic, append this property's value with a `topic_`.
+       */
       userOrTopic?: string;
     }
     const data: NotificationRequest = <NotificationRequest>documentSnapshot.data();
@@ -49,6 +96,7 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
     function isType(prop: string, type: 'boolean' | 'function' | 'number' | 'object' | 'string' | 'symbol' | 'undefined'): boolean {
       return typeof data[prop] === type;
     }
+
     /**
      * Checks if the property specified is a string
      * @param prop The property in the `data` array
@@ -74,43 +122,47 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
     function isHexColor(prop: string): boolean {
       return /^#[0-9A-F]{6}$/i.test(data[prop]);
     }
-  
-    if (isString('userOrTopic')) {
-      if (!isEmpty('userOrTopic')) {
-        if (data['userOrTopic'].startsWith('topic')) {
-          // Message is meant to be sent to a topic
-          // Remove the prefix
-          message['topic'] = data['userOrTopic'].replace('topic_', '');
-          delete message['token'];
+
+    if ('userOrTopic' in data) {
+      if (data['userOrTopic'] !== null) {
+        if (isString('userOrTopic')) {
+          if (!isEmpty('userOrTopic')) {
+            if (data['userOrTopic'].startsWith('topic')) {
+              // Message is meant to be sent to a topic
+              // Remove the prefix
+              message['topic'] = data['userOrTopic'].replace('topic_', '');
+              delete message['token'];
+            } else {
+              // Attempt to use the user's device registration token
+              firestore.doc(`users/${data['userOrTopic']}`)
+                .get()
+                .then((doc) => {
+                  if (doc.exists) {
+                    const docData = doc.data();
+                    if ('registrationToken' in docData) {
+                      message['token'] = docData['registrationToken'];
+                    } else {
+                      console.error('registrationToken doesn\'t exist!');
+                    }
+                  } else {
+                    console.error('User doesn\'t exist!');
+                  }
+                })
+                .catch((reason) => {
+                  console.error('An error occurred while attempting to retrieve the document:', reason);
+                });
+            }
+          } else {
+            console.error('The notification request\'s user/topic is empty! Aborting notification request...');
+            return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+              .delete();
+          }
         } else {
-          // Attempt to use the user's device registration token
-          firestore.doc(`users/${data['userOrTopic']}`)
-            .get()
-            .then((doc) => {
-              if (doc.exists) {
-                const docData = doc.data();
-                if ('registrationToken' in docData) {
-                  message['token'] = docData['registrationToken'];
-                } else {
-                  console.error('registrationToken doesn\'t exist!');
-                }
-              } else {
-                console.error('User doesn\'t exist!');
-              }
-            })
-            .catch((reason) => {
-              console.error('An error occurred while attempting to retrieve the document:', reason);
-            });
+          console.error('The notification request\'s user/topic is not a valid string! Aborting notification request...');
+          return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+            .delete();
         }
-      } else {
-        console.error('The notification request\'s user/topic is empty! Aborting notification request...');
-        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
-          .delete();
       }
-    } else {
-      console.error('The notification request\'s user/topic is not a valid string! Aborting notification request...');
-      return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
-          .delete();
     }
     // Handles the `notification` key
     const messageNotificationObj = {};
@@ -122,104 +174,134 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
       notification: {}
     };
     if ('notificationTitle' in data) {
-      if (isString('notificationTitle')) {
-        if (!isEmpty('notificationTitle')) {
-          messageNotificationObj['title'] = data['notificationTitle'];
+      if (data['notificationTitle'] !== null) {
+        if (isString('notificationTitle')) {
+          if (!isEmpty('notificationTitle')) {
+            messageNotificationObj['title'] = data['notificationTitle'];
+          } else {
+            console.error('The notification request\'s title is empty!');
+          }
         } else {
-          console.error('The notification request\'s title is empty!');
+          console.error('The notification request\'s title is not a valid string! Aborting notification request...');
+          return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+            .delete();
         }
-      } else {
-        console.error('The notification request\'s title is not a valid string! Aborting notification request...');
-        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
-        .delete();
       }
     }
     if ('notificationBody' in data) {
-      if (isString('notificationBody')) {
-        if (!isEmpty('notificationBody')) {
-          messageNotificationObj['body'] = data['notificationBody'];
+      if (data['notificationBody'] !== null) {
+        if (isString('notificationBody')) {
+          if (!isEmpty('notificationBody')) {
+            messageNotificationObj['body'] = data['notificationBody'];
+          } else {
+            console.error('The notification request\'s body is empty!');
+          }
         } else {
-          console.error('The notification request\'s body is empty!');
+          console.error('The notification request\'s body is not a valid string! Aborting notification request...');
+          return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+            .delete();
         }
-      } else {
-        console.error('The notification request\'s body is not a valid string! Aborting notification request...');
-        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
-          .delete();
       }
     }
 
     if ('notificationChannelId' in data) {
-      if (isString('notificationChannelId')) {
-        if (!isEmpty('notificationChannelId')) {
-          messageAndroidObj['data']['notificationChannelId'] = data['notificationChannelId'];
+      if (data['notificationChannelId'] !== null) {
+        if (isString('notificationChannelId')) {
+          if (!isEmpty('notificationChannelId')) {
+            messageAndroidObj['data']['notificationChannelId'] = data['notificationChannelId'];
+          } else {
+            console.error('The notification request\'s Android notification channel ID is empty! Setting to default channel ID...');
+            messageAndroidObj['data']['notificationChannelId'] = 'uncategorised';
+          }
         } else {
-          console.error('The notification\'s Android notification channel ID is empty! Setting to default channel ID...');
-          messageAndroidObj['data']['notificationChannelId'] = 'uncategorised';
+          console.error('The notification request\'s Android notification channel ID is not a valid string! Aborting notification request...');
+          return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+            .delete();
         }
       } else {
-        console.error('The notification request\'s Android notification channel ID is not a valid string! Aborting notification request...');
-        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
-          .delete();
+        console.log('No data was supplied for the notification request\'s Android notification channel ID. Setting to default channel ID...');
+        messageAndroidObj['data']['notificationChannelId'] = 'uncategorised';
       }
     }
     if ('notificationColor' in data) {
-      if (isString('notificationColor')) {
-        if (!isEmpty('notificationColor')) {
-          if (isHexColor('notificationColor')) {
-            messageAndroidObj['notification']['color'] = data['notificationColor'];
+      if (data['notificationColor'] !== null) {
+        if (isString('notificationColor')) {
+          if (!isEmpty('notificationColor')) {
+            if (isHexColor('notificationColor')) {
+              messageAndroidObj['notification']['color'] = data['notificationColor'];
+            } else {
+              console.error('The notification request\'s color is not a hexadecimal color! Setting to default color...');
+              messageAndroidObj['notification']['color'] = '#3F51B5';
+            }
           } else {
-            console.error('The notification request\'s color is not a hexadecimal color! Setting to default color...');
+            console.error('The notification request\'s color is empty! Setting to default color...');
             messageAndroidObj['notification']['color'] = '#3F51B5';
           }
         } else {
-          console.error('The notification request\'s color is empty! Setting to default color...');
-          messageAndroidObj['notification']['color'] = '#3F51B5';
+          console.error('The notification request\'s color is not a valid string! Aborting notification request...');
+          return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+            .delete();
         }
-      } else {
-        console.error('The notification request\'s color is not a valid string! Aborting notification request...');
-        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
-          .delete();
       }
     }
     if ('notificationIcon' in data) {
-      if (isString('notificationIcon')) {
-        if (!isEmpty('notificationIcon')) {
-          messageAndroidObj['notification']['icon'] = data['notificationIcon'];
+      if (data['notificationIcon'] !== null) {
+        if (isString('notificationIcon')) {
+          if (!isEmpty('notificationIcon')) {
+            messageAndroidObj['notification']['icon'] = data['notificationIcon'];
+          } else {
+            console.error('The notification request\'s icon is empty!');
+          }
         } else {
-          console.error('The notification request\'s icon is empty!');
+          console.error('The notification request\'s icon is not a valid string! Aborting notification request...');
+          return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+            .delete();
         }
-      } else {
-        console.error('The notification request\'s icon is not a valid string! Aborting notification request...');
-        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
-          .delete();
       }
     }
     if ('notificationPriority' in data) {
-      if (isString('notificationPriority')) {
-        if (!isEmpty('notificationPriority')) {
-          if (isEquals('notificationPriority', 'normal') || isEquals('notificationPriority', 'high')) {
-            messageAndroidObj['priority'] = data['notificationPriority'];
+      if (data['notificationPriority'] !== null) {
+        if (isString('notificationPriority')) {
+          if (!isEmpty('notificationPriority')) {
+            if (isEquals('notificationPriority', 'normal') || isEquals('notificationPriority', 'high')) {
+              messageAndroidObj['priority'] = data['notificationPriority'];
+            } else {
+              console.error('The notification request\'s priority is not a valid priority type! Setting to default value...');
+              messageAndroidObj['priority'] = 'normal';
+            }
           } else {
-            console.error('The notification request\'s priority is not a valid priority type! Setting to default value...');
-            messageAndroidObj['priority'] = 'normal';
+            console.error('The notification request\'s priority is empty!');
           }
         } else {
-          console.error('The notification request\'s priority is empty!');
+          console.error('The notification request\'s priority is not a valid string! Aborting notification request...');
+          return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+            .delete();
         }
-      } else {
-        console.error('The notification request\'s priority is not a valid string! Aborting notification request...');
-        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
-          .delete();
       }
     }
 
     if ('ttl' in data) {
-      if (isType('ttl', 'number')) {
-        messageAndroidObj['ttl'] = data['ttl'];
-      } else {
-        console.error('The notification request\'s TTL (time-to-live) is not a valid integer! Aborting notification request...');
-        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
-          .delete();
+      console.log('Note: The `ttl` property is deprecated and will be removed in a future release. Use `notificationTtl` instead.');
+      if (data['ttl'] !== null) {
+        if (isType('ttl', 'number')) {
+          messageAndroidObj['ttl'] = data['ttl'];
+        } else {
+          console.error('The notification request\'s TTL (time-to-live) is not a valid integer! Aborting notification request...');
+          return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+            .delete();
+        }
+      }
+    }
+    
+    if ('notificationTtl' in data) {
+      if (data['notificationTtl'] !== null) {
+        if (isType('notificationTtl', 'number')) {
+          messageAndroidObj['ttl'] = data['notificationTtl'];
+        } else {
+          console.error('The notification request\'s TTL (time-to-live) is not a valid integer! Aborting notification request...');
+          return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+            .delete();
+        }
       }
     }
 
