@@ -12,6 +12,7 @@ const firestore = admin.firestore();
  */
 export const sendFcmNotification = functions.firestore.document('notificationRequests/{request}')
   .onCreate((documentSnapshot, context) => {
+
     interface NotificationRequest {
       notificationBody?: string;
       notificationChannelId?: string;
@@ -28,6 +29,52 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
       // Delete this property if the notification is using a topic
       token: ''
     };
+
+    /**
+     * Checks if the property specified is equals to the 2nd parameter
+     * @param prop The property in the `data` array
+     * @param against The value to check against
+     * @return True if the property is equals to the value, false otherwise
+     */
+    function isEquals(prop: string, against: any): boolean {
+      return data[prop] === against;
+    }
+
+    /**
+     * Checks if the property specified is of a specific type
+     * @param prop The property in the `data` array
+     * @param type The type to check
+     * @return True if the property is of type `type`, false otherwise
+     */
+    function isType(prop: string, type: 'boolean' | 'function' | 'number' | 'object' | 'string' | 'symbol' | 'undefined'): boolean {
+      return typeof data[prop] === type;
+    }
+    /**
+     * Checks if the property specified is a string
+     * @param prop The property in the `data` array
+     * @return True if the property is a string, false otherwise
+     * @deprecated Use `isType` instead
+     */
+    function isString(prop: string): boolean {
+      return isType(prop, 'string');
+    }
+    /**
+     * Checks if the property specified is not empty
+     * @param prop The property in the `data` array
+     * @return True if the property is empty, false otherwise
+     */
+    function isEmpty(prop: string): boolean {
+      return data[prop] === '';
+    }
+    /**
+     * Checks if the property specified is a valid hexadecimal color value
+     * @param prop The property in the `data` array
+     * @return True if the property is a valid hexadecimal color, false otherwise
+     */
+    function isHexColor(prop: string): boolean {
+      return /^#[0-9A-F]{6}$/i.test(data[prop]);
+    }
+  
     if (data['userOrTopic'].startsWith('topic')) {
       // Message is meant to be sent to a topic
       // Remove the prefix
@@ -63,28 +110,107 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
       notification: {}
     };
     if ('notificationTitle' in data) {
-      messageNotificationObj['title'] = data['notificationTitle'];
+      if (isString('notificationTitle')) {
+        if (!isEmpty('notificationTitle')) {
+          messageNotificationObj['title'] = data['notificationTitle'];
+        } else {
+          console.error('The notification request\'s title is empty!');
+        }
+      } else {
+        console.error('The notification request\'s title is not a valid string! Aborting notification request...');
+        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+        .delete();
+      }
     }
     if ('notificationBody' in data) {
-      messageNotificationObj['body'] = data['notificationBody'];
+      if (isString('notificationBody')) {
+        if (!isEmpty('notificationBody')) {
+          messageNotificationObj['body'] = data['notificationBody'];
+        } else {
+          console.error('The notification request\'s body is empty!');
+        }
+      } else {
+        console.error('The notification request\'s body is not a valid string! Aborting notification request...');
+        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+          .delete();
+      }
     }
 
     if ('notificationChannelId' in data) {
-      messageAndroidObj['data']['notificationChannelId'] = data['notificationChannelId'];
+      if (isString('notificationChannelId')) {
+        if (!isEmpty('notificationChannelId')) {
+          messageAndroidObj['data']['notificationChannelId'] = data['notificationChannelId'];
+        } else {
+          console.error('The notification\'s Android notification channel ID is empty! Setting to default channel ID...');
+          messageAndroidObj['data']['notificationChannelId'] = 'uncategorised';
+        }
+      } else {
+        console.error('The notification request\'s Android notification channel ID is not a valid string! Aborting notification request...');
+        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+          .delete();
+      }
     }
     if ('notificationColor' in data) {
-      messageAndroidObj['notification']['color'] = data['notificationColor'];
+      if (isString('notificationColor')) {
+        if (!isEmpty('notificationColor')) {
+          if (isHexColor('notificationColor')) {
+            messageAndroidObj['notification']['color'] = data['notificationColor'];
+          } else {
+            console.error('The notification request\'s color is not a hexadecimal color! Setting to default color...');
+            messageAndroidObj['notification']['color'] = '#3F51B5';
+          }
+        } else {
+          console.error('The notification request\'s color is empty! Setting to default color...');
+          messageAndroidObj['notification']['color'] = '#3F51B5';
+        }
+      } else {
+        console.error('The notification request\'s color is not a valid string! Aborting notification request...');
+        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+          .delete();
+      }
     }
     if ('notificationIcon' in data) {
-      messageAndroidObj['notification']['icon'] = data['notificationIcon'];
+      if (isString('notificationIcon')) {
+        if (!isEmpty('notificationIcon')) {
+          messageAndroidObj['notification']['icon'] = data['notificationIcon'];
+        } else {
+          console.error('The notification request\'s icon is empty!');
+        }
+      } else {
+        console.error('The notification request\'s icon is not a valid string! Aborting notification request...');
+        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+          .delete();
+      }
     }
     if ('notificationPriority' in data) {
-      messageAndroidObj['priority'] = data['notificationPriority'];
+      if (isString('notificationPriority')) {
+        if (!isEmpty('notificationPriority')) {
+          if (isEquals('notificationPriority', 'normal') || isEquals('notificationPriority', 'high')) {
+            messageAndroidObj['priority'] = data['notificationPriority'];
+          } else {
+            console.error('The notification request\'s priority is not a valid priority type! Setting to default value...');
+            messageAndroidObj['priority'] = 'normal';
+          }
+        } else {
+          console.error('The notification request\'s priority is empty!');
+        }
+      } else {
+        console.error('The notification request\'s priority is not a valid string! Aborting notification request...');
+        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+          .delete();
+      }
     }
+
     if ('ttl' in data) {
-      messageAndroidObj['ttl'] = data['ttl'];
+      if (isType('ttl', 'number')) {
+        messageAndroidObj['ttl'] = data['ttl'];
+      } else {
+        console.error('The notification request\'s TTL (time-to-live) is not a valid integer! Aborting notification request...');
+        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+          .delete();
+      }
     }
-    
+
     if (Object.keys(messageNotificationObj).length !== 0) {
       message['notification'] = messageNotificationObj;
     }
