@@ -75,30 +75,42 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
       return /^#[0-9A-F]{6}$/i.test(data[prop]);
     }
   
-    if (data['userOrTopic'].startsWith('topic')) {
-      // Message is meant to be sent to a topic
-      // Remove the prefix
-      message['topic'] = data['userOrTopic'].replace('topic_', '');
-      delete message['token'];
+    if (isString('userOrTopic')) {
+      if (!isEmpty('userOrTopic')) {
+        if (data['userOrTopic'].startsWith('topic')) {
+          // Message is meant to be sent to a topic
+          // Remove the prefix
+          message['topic'] = data['userOrTopic'].replace('topic_', '');
+          delete message['token'];
+        } else {
+          // Attempt to use the user's device registration token
+          firestore.doc(`users/${data['userOrTopic']}`)
+            .get()
+            .then((doc) => {
+              if (doc.exists) {
+                const docData = doc.data();
+                if ('registrationToken' in docData) {
+                  message['token'] = docData['registrationToken'];
+                } else {
+                  console.error('registrationToken doesn\'t exist!');
+                }
+              } else {
+                console.error('User doesn\'t exist!');
+              }
+            })
+            .catch((reason) => {
+              console.error('An error occurred while attempting to retrieve the document:', reason);
+            });
+        }
+      } else {
+        console.error('The notification request\'s user/topic is empty! Aborting notification request...');
+        return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+          .delete();
+      }
     } else {
-      // Attempt to use the user's device registration token
-      firestore.doc(`users/${data['userOrTopic']}`)
-        .get()
-        .then((doc) => {
-          if (doc.exists) {
-            const docData = doc.data();
-            if ('registrationToken' in docData) {
-              message['token'] = docData['registrationToken'];
-            } else {
-              console.error('registrationToken doesn\'t exist!');
-            }
-          } else {
-            console.error('User doesn\'t exist!');
-          }
-        })
-        .catch((reason) => {
-          console.error('An error occurred while attempting to retrieve the document:', reason);
-        });
+      console.error('The notification request\'s user/topic is not a valid string! Aborting notification request...');
+      return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+          .delete();
     }
     // Handles the `notification` key
     const messageNotificationObj = {};
