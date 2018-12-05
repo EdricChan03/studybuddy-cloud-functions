@@ -15,6 +15,25 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
 
     interface NotificationRequest {
       /**
+       * Specifies the notification's actions
+       *
+       * Note: This property is only for Android.
+       */
+      notificationActions?: {
+        /**
+         * The icon of the notification action
+         */
+        actionIcon?: string;
+        /**
+         * The title of the notification action
+         */
+        actionTitle?: string;
+        /**
+         * The type of Intent to launch when the notification action is clicked on
+         */
+        actionType?: string;
+      }
+      /**
        * Specifies the body of the notification
        */
       notificationBody?: string;
@@ -173,16 +192,16 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
       // Create `notification` key to prevent errors
       notification: {}
     };
-    if ('notificationTitle' in data) {
-      if (data['notificationTitle'] !== null) {
-        if (isString('notificationTitle')) {
-          if (!isEmpty('notificationTitle')) {
-            messageNotificationObj['title'] = data['notificationTitle'];
+    if ('notificationActions' in data) {
+      if (data['notificationActions'] !== null) {
+        if (isType('notificationActions', 'object')) {
+          if (Object.keys(data['notificationActions']).length > 0) {
+            messageAndroidObj['data'] = data['notificationActions'];
           } else {
-            console.error('The notification request\'s title is empty!');
+            console.error('The notification request\'s actions are empty!');
           }
         } else {
-          console.error('The notification request\'s title is not a valid string! Aborting notification request...');
+          console.error('The notification request\'s actions is not a valid object! Aborting notification request...');
           return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
             .delete();
         }
@@ -279,12 +298,25 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
         }
       }
     }
-
-    if ('ttl' in data) {
-      console.log('Note: The `ttl` property is deprecated and will be removed in a future release. Use `notificationTtl` instead.');
-      if (data['ttl'] !== null) {
-        if (isType('ttl', 'number')) {
-          messageAndroidObj['ttl'] = data['ttl'];
+    if ('notificationTitle' in data) {
+      if (data['notificationTitle'] !== null) {
+        if (isString('notificationTitle')) {
+          if (!isEmpty('notificationTitle')) {
+            messageNotificationObj['title'] = data['notificationTitle'];
+          } else {
+            console.error('The notification request\'s title is empty!');
+          }
+        } else {
+          console.error('The notification request\'s title is not a valid string! Aborting notification request...');
+          return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
+            .delete();
+        }
+      }
+    }
+    if ('notificationTtl' in data) {
+      if (data['notificationTtl'] !== null) {
+        if (isType('notificationTtl', 'number')) {
+          messageAndroidObj['ttl'] = data['notificationTtl'];
         } else {
           console.error('The notification request\'s TTL (time-to-live) is not a valid integer! Aborting notification request...');
           return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
@@ -292,11 +324,11 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
         }
       }
     }
-    
-    if ('notificationTtl' in data) {
-      if (data['notificationTtl'] !== null) {
-        if (isType('notificationTtl', 'number')) {
-          messageAndroidObj['ttl'] = data['notificationTtl'];
+    if ('ttl' in data) {
+      console.log('Note: The `ttl` property is deprecated and will be removed in a future release. Use `notificationTtl` instead.');
+      if (data['ttl'] !== null) {
+        if (isType('ttl', 'number')) {
+          messageAndroidObj['ttl'] = data['ttl'];
         } else {
           console.error('The notification request\'s TTL (time-to-live) is not a valid integer! Aborting notification request...');
           return firestore.doc(`notificationRequests/${documentSnapshot.id}`)
