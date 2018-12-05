@@ -13,26 +13,27 @@ const firestore = admin.firestore();
 export const sendFcmNotification = functions.firestore.document('notificationRequests/{request}')
   .onCreate((documentSnapshot, context) => {
 
+    interface NotificationAction {
+      /**
+       * The icon of the notification action
+       */
+      actionIcon?: string;
+      /**
+       * The title of the notification action
+       */
+      actionTitle?: string;
+      /**
+       * The type of Intent to launch when the notification action is clicked on
+       */
+      actionType?: string;
+    }
     interface NotificationRequest {
       /**
        * Specifies the notification's actions
        *
        * Note: This property is only for Android.
        */
-      notificationActions?: {
-        /**
-         * The icon of the notification action
-         */
-        actionIcon?: string;
-        /**
-         * The title of the notification action
-         */
-        actionTitle?: string;
-        /**
-         * The type of Intent to launch when the notification action is clicked on
-         */
-        actionType?: string;
-      }
+      notificationActions?: NotificationAction[];
       /**
        * Specifies the body of the notification
        */
@@ -188,7 +189,9 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
     // Handles the `android` key
     const messageAndroidObj = {
       // Create `data` key to prevent errors
-      data: {},
+      data: {
+        notificationActions: []
+      },
       // Create `notification` key to prevent errors
       notification: {}
     };
@@ -196,7 +199,7 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
       if (data['notificationActions'] !== null) {
         if (isType('notificationActions', 'object')) {
           if (Object.keys(data['notificationActions']).length > 0) {
-            messageAndroidObj['data'] = data['notificationActions'];
+            messageAndroidObj['data']['notificationActions'] = data['notificationActions'];
           } else {
             console.error('The notification request\'s actions are empty!');
           }
