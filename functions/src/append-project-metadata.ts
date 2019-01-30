@@ -32,44 +32,42 @@ export const appendProjectMetadata = functions.firestore.document('users/{userUi
         return null;
       }
     }
-    if (beforeDoc.data()['project']) {
-      projectDoc = getProjectDocument(beforeDoc);
-      if (projectDoc) {
-        return projectDoc.get()
-          .then((snapshot) => {
-            const projectDocData = snapshot.data();
-            let docToUpdate = {};
-            switch (checkEventType(change)) {
-              case 'create':
-                docToUpdate = {
-                  todos: admin.firestore.FieldValue.arrayUnion(afterDoc.ref)
-                };
+    projectDoc = getProjectDocument(beforeDoc);
+    if (projectDoc) {
+      return projectDoc.get()
+        .then((snapshot) => {
+          const projectDocData = snapshot.data();
+          let docToUpdate = {};
+          switch (checkEventType(change)) {
+            case 'create':
+              docToUpdate = {
+                todos: admin.firestore.FieldValue.arrayUnion(afterDoc.ref)
+              };
+              if (afterDoc.data()['isDone']) {
+                docToUpdate['todosDone'] = admin.firestore.FieldValue.arrayUnion(afterDoc.ref);
+              }
+            case 'delete':
+              docToUpdate = {
+                todos: admin.firestore.FieldValue.arrayRemove(beforeDoc.ref),
+                todosDone: admin.firestore.FieldValue.arrayRemove(beforeDoc.ref)
+              };
+            case 'update':
+              if (!projectDocData['todos'].some(doc => doc.id === afterDoc.id)) {
+                docToUpdate['todos'] = admin.firestore.FieldValue.arrayUnion(afterDoc.ref);
+              } else {
                 if (afterDoc.data()['isDone']) {
-                  docToUpdate['todosDone'] = admin.firestore.FieldValue.arrayUnion(afterDoc.ref);
-                }
-              case 'delete':
-                docToUpdate = {
-                  todos: admin.firestore.FieldValue.arrayRemove(beforeDoc.ref),
-                  todosDone: admin.firestore.FieldValue.arrayRemove(beforeDoc.ref)
-                };
-              case 'update':
-                if (!projectDocData['todos'].some(doc => doc.id === afterDoc.id)) {
-                  docToUpdate['todos'] = admin.firestore.FieldValue.arrayUnion(afterDoc.ref);
+                  if (!projectDocData['todosDone'].some(doc => doc.id === afterDoc.id)) {
+                    docToUpdate['todosDone'] = admin.firestore.FieldValue.arrayUnion(afterDoc.ref);
+                  }
                 } else {
-                  if (afterDoc.data()['isDone']) {
-                    if (!projectDocData['todosDone'].some(doc => doc.id === afterDoc.id)) {
-                      docToUpdate['todosDone'] = admin.firestore.FieldValue.arrayUnion(afterDoc.ref);
-                    }
-                  } else {
-                    if (!projectDocData['todosDone'].some(doc => doc.id === afterDoc.id)) {
-                      docToUpdate['todosDone'] = admin.firestore.FieldValue.arrayRemove(afterDoc.ref);
-                    }
+                  if (!projectDocData['todosDone'].some(doc => doc.id === afterDoc.id)) {
+                    docToUpdate['todosDone'] = admin.firestore.FieldValue.arrayRemove(afterDoc.ref);
                   }
                 }
-            }
-            return projectDoc.update(docToUpdate);
-          });
-      }
+              }
+          }
+          return projectDoc.update(docToUpdate);
+        });
     }
     console.log(`Document ${beforeDoc.id} has no project assigned to it!`);
     return null;
