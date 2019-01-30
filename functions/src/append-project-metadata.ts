@@ -13,8 +13,27 @@ export const appendProjectMetadata = functions.firestore.document('users/{userUi
     const beforeDoc = change.before;
     const afterDoc = change.after;
     let projectDoc: admin.firestore.DocumentReference;
+
+    /**
+     * Retrieves the project document assigned to the todo document
+     * @param todoDoc The todo document to check
+     * @return A document reference, or null if the todo document doesn't exist
+     */
+    function getProjectDocument(todoDoc: FirebaseFirestore.DocumentSnapshot): FirebaseFirestore.DocumentReference {
+      if (todoDoc.exists) {
+        if (typeof todoDoc.data()['project'] === 'string') {
+          // Using deprecated approach
+          return firestore.doc(`users/${context.params['userId']}/todoProjects/${todoDoc.data()['project']}`);
+        } else {
+          // The field is probably a document reference
+          return todoDoc.data()['project'] as FirebaseFirestore.DocumentReference;
+        }
+      } else {
+        return null;
+      }
+    }
     if (beforeDoc.data()['project']) {
-      projectDoc = firestore.doc(`users/${context.params['userUid']}/todoProjects/${beforeDoc.data()['project']}`);
+      projectDoc = getProjectDocument(beforeDoc);
       if (projectDoc) {
         return projectDoc.get()
           .then((snapshot) => {
