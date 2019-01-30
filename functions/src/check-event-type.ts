@@ -16,6 +16,6 @@ export function checkEventType(change: Change<FirebaseFirestore.DocumentSnapshot
   } else if (before && !after) {
     return 'delete';
   } else {
-    throw new Error(`Unkown firestore event! before: '${before}', after: '${after}'`);
+    return null;
   }
 }
