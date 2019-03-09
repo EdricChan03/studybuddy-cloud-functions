@@ -146,7 +146,7 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
     // Handles the `notification` key
     const messageNotificationObj = {};
     // Handles the `android` key
-    const messageAndroidObj = {
+    const messageAndroidObj: admin.messaging.AndroidConfig = {
       // Create `data` key to prevent errors
       data: {
         notificationActions: ''
@@ -189,10 +189,12 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
       if (data['notificationChannelId'] !== null) {
         if (Utils.isString(data['notificationChannelId'])) {
           if (!Utils.isEmpty(data['notificationChannelId'])) {
-            messageAndroidObj['data']['notificationChannelId'] = data['notificationChannelId'];
+            // messageAndroidObj['data']['notificationChannelId'] = data['notificationChannelId'];
+            // Notification Channel ID is supported in Cloud messaging
+            messageAndroidObj['notification']['channelId'] = data['notificationChannelId'];
           } else {
             console.error('The notification request\'s Android notification channel ID is empty! Setting to default channel ID...');
-            messageAndroidObj['data']['notificationChannelId'] = 'uncategorised';
+            messageAndroidObj['notification']['channelId'] = 'uncategorised';
           }
         } else {
           console.error('The notification request\'s Android notification channel ID is not a valid string! Aborting notification request...');
@@ -201,7 +203,7 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
         }
       } else {
         console.log('No data was supplied for the notification request\'s Android notification channel ID. Setting to default channel ID...');
-        messageAndroidObj['data']['notificationChannelId'] = 'uncategorised';
+        messageAndroidObj['notification']['channelId'] = 'uncategorised';
       }
     }
     if ('notificationColor' in data) {
