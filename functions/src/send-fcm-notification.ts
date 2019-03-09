@@ -101,12 +101,11 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
       // Delete this property if the notification is using a topic
       token: ''
     };
-    const utils = new Utils();
 
     if ('userOrTopic' in data) {
       if (data['userOrTopic'] !== null) {
-        if (utils.isString(data['userOrTopic'])) {
-          if (!utils.isEmpty(data['userOrTopic'])) {
+        if (Utils.isString(data['userOrTopic'])) {
+          if (!Utils.isEmpty(data['userOrTopic'])) {
             if (data['userOrTopic'].startsWith('topic')) {
               // Message is meant to be sent to a topic
               // Remove the prefix
@@ -157,7 +156,7 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
     };
     if ('notificationActions' in data) {
       if (data['notificationActions'] !== null) {
-        if (utils.isType(data['notificationActions'], 'object')) {
+        if (Utils.isType(data['notificationActions'], 'object')) {
           if (Object.keys(data['notificationActions']).length > 0) {
             messageAndroidObj['data']['notificationActions'] = JSON.stringify(data['notificationActions']);
           } else {
@@ -172,8 +171,8 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
     }
     if ('notificationBody' in data) {
       if (data['notificationBody'] !== null) {
-        if (utils.isString(data['notificationBody'])) {
-          if (!utils.isEmpty(data['notificationBody'])) {
+        if (Utils.isString(data['notificationBody'])) {
+          if (!Utils.isEmpty(data['notificationBody'])) {
             messageNotificationObj['body'] = data['notificationBody'];
           } else {
             console.error('The notification request\'s body is empty!');
@@ -188,8 +187,8 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
 
     if ('notificationChannelId' in data) {
       if (data['notificationChannelId'] !== null) {
-        if (utils.isString(data['notificationChannelId'])) {
-          if (!utils.isEmpty(data['notificationChannelId'])) {
+        if (Utils.isString(data['notificationChannelId'])) {
+          if (!Utils.isEmpty(data['notificationChannelId'])) {
             messageAndroidObj['data']['notificationChannelId'] = data['notificationChannelId'];
           } else {
             console.error('The notification request\'s Android notification channel ID is empty! Setting to default channel ID...');
@@ -207,9 +206,9 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
     }
     if ('notificationColor' in data) {
       if (data['notificationColor'] !== null) {
-        if (utils.isString(data['notificationColor'])) {
-          if (!utils.isEmpty(data['notificationColor'])) {
-            if (utils.isHexColor(data['notificationColor'])) {
+        if (Utils.isString(data['notificationColor'])) {
+          if (!Utils.isEmpty(data['notificationColor'])) {
+            if (Utils.isHexColor(data['notificationColor'])) {
               messageAndroidObj['notification']['color'] = data['notificationColor'];
             } else {
               console.error('The notification request\'s color is not a hexadecimal color! Setting to default color...');
@@ -228,8 +227,8 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
     }
     if ('notificationIcon' in data) {
       if (data['notificationIcon'] !== null) {
-        if (utils.isString(data['notificationIcon'])) {
-          if (!utils.isEmpty(data['notificationIcon'])) {
+        if (Utils.isString(data['notificationIcon'])) {
+          if (!Utils.isEmpty(data['notificationIcon'])) {
             messageAndroidObj['notification']['icon'] = data['notificationIcon'];
           } else {
             console.error('The notification request\'s icon is empty!');
@@ -243,9 +242,9 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
     }
     if ('notificationPriority' in data) {
       if (data['notificationPriority'] !== null) {
-        if (utils.isString(data['notificationPriority'])) {
-          if (!utils.isEmpty(data['notificationPriority'])) {
-            if (utils.isEquals(data['notificationPriority'], 'normal') || utils.isEquals(data['notificationPriority'], 'high')) {
+        if (Utils.isString(data['notificationPriority'])) {
+          if (!Utils.isEmpty(data['notificationPriority'])) {
+            if (Utils.isEquals(data['notificationPriority'], 'normal') || Utils.isEquals(data['notificationPriority'], 'high')) {
               messageAndroidObj['priority'] = data['notificationPriority'];
             } else {
               console.error('The notification request\'s priority is not a valid priority type! Setting to default value...');
@@ -263,8 +262,8 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
     }
     if ('notificationTitle' in data) {
       if (data['notificationTitle'] !== null) {
-        if (utils.isString(data['notificationTitle'])) {
-          if (!utils.isEmpty(data['notificationTitle'])) {
+        if (Utils.isString(data['notificationTitle'])) {
+          if (!Utils.isEmpty(data['notificationTitle'])) {
             messageNotificationObj['title'] = data['notificationTitle'];
           } else {
             console.error('The notification request\'s title is empty!');
@@ -278,7 +277,7 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
     }
     if ('notificationTtl' in data) {
       if (data['notificationTtl'] !== null) {
-        if (utils.isType(data['notificationTtl'], 'number')) {
+        if (Utils.isType(data['notificationTtl'], 'number')) {
           messageAndroidObj['ttl'] = data['notificationTtl'];
         } else {
           console.error('The notification request\'s TTL (time-to-live) is not a valid integer! Aborting notification request...');
@@ -290,7 +289,7 @@ export const sendFcmNotification = functions.firestore.document('notificationReq
     if ('ttl' in data) {
       console.log('Note: The `ttl` property is deprecated and will be removed in a future release. Use `notificationTtl` instead.');
       if (data['ttl'] !== null) {
-        if (utils.isType(data['ttl'], 'number')) {
+        if (Utils.isType(data['ttl'], 'number')) {
           messageAndroidObj['ttl'] = data['ttl'];
         } else {
           console.error('The notification request\'s TTL (time-to-live) is not a valid integer! Aborting notification request...');
