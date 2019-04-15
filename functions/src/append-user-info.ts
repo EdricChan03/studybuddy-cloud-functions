@@ -16,6 +16,6 @@ export const appendUserInfo = functions.auth.user().onCreate((user, context) => 
   // See 
   return firestore.doc(`users/${user.uid}`)
   .set({
-    user: user.toJSON()
+    user: JSON.parse(JSON.stringify(user))
   });
 })
