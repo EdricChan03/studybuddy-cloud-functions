@@ -7,7 +7,7 @@ import * as functions from 'firebase-functions';
  */
 export const appendDocId = functions.firestore.document('users/{userUid}/{collection}/{todoUid}')
   .onCreate((documentSnapshot, context) => {
-    if (context.params['collection'] === 'todos' || context.params['collection'] === 'todoProjects') {
+    if (context.params['collection'] === 'todoProjects') {
       return documentSnapshot
         .ref.update({
           id: documentSnapshot.id
